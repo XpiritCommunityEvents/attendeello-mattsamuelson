@@ -1,0 +1,21 @@
+name: Deploy HMSBlazor
+env:
+  location: 'East US 2'
+  slotname: staging
+on:
+  release: 
+     types: [published]
+
+  workflow_dispatch:
+     
+jobs:
+    build:
+        runs-on: ubuntu-latest  
+        steps:
+          - name: Determine release ID
+            id: release_id
+            uses: actions/github-script@v7
+            with:
+                github-token: ${{ secrets.GITHUB_TOKEN }}
+                script: |
+                  console.log('${{ github.event.release.id }}');
