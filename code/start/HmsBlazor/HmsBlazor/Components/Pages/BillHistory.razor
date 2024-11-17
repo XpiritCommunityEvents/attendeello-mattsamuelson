@@ -1,0 +1,249 @@
+@page "/bill-history" 
+@using Project_HMS
+@using System.Data
+@inject Project_HMS.DataAccess Da
+
+@code { 
+     private int? BId { get; set; } 
+      private int? RId { get; set; } 
+       private string CName { get; set; } 
+        private string Phone { get; set; } 
+        private DateTime CheckIn { get; set; }
+         private DateTime CheckOut { get; set; }
+          private double? Advance { get; set; }
+           private double? Remaining { get; set; }
+            private double? Total { get; set; }
+            private double? NPaid { get; set; }
+             private double? Return { get; set; }
+              private List<Booking> Bookings { get; set; } = new List<Booking>();
+
+protected override void OnInitialized()
+{
+    PopulateGridView();
+}
+
+private void PopulateGridView()
+{
+    try
+    {
+        string sql = "select * from Booking;";
+        DataSet ds1 = Da.ExecuteQuery(sql);
+        Bookings = ds1.Tables[0].AsEnumerable().Select(row => new Booking
+        {
+            BId = (int)row["BId"],
+            RId = (int)row["RId"],
+            CName = row["CName"].ToString(),
+            Phone = row["CPhone"].ToString(),
+            CheckIn = Convert.ToDateTime(row["CheckIn"]),
+            CheckOut = Convert.ToDateTime(row["CheckOut"]),
+            Advance = (double)row["Advance"],
+            Remaining = (double)row["Remaining"],
+            Total = (double)row["Total"]
+        }).ToList();
+    }
+    catch (Exception exc)
+    {
+        Console.WriteLine("Error: " + exc.Message);
+    }
+}
+
+private void ClearContent()
+{
+    BId = null;
+    RId = null;
+    CName = string.Empty;
+    Phone = string.Empty;
+    CheckIn = DateTime.Now;
+    CheckOut = DateTime.Now;
+    Advance = null;
+    Remaining = null;
+    Total = null;
+    NPaid = null;
+    Return = null;
+}
+
+private void CalculateReturn()
+{
+    try
+    {
+        double rv = 0;
+        var R = Convert.ToDouble(Remaining);
+        var N = Convert.ToDouble(NPaid);
+        rv = N - R;
+        Return = rv;
+    }
+    catch (Exception exc)
+    {
+        Console.WriteLine("Error: " + exc.Message);
+    }
+}
+
+private void UpdateData()
+{
+    try
+    {
+        string updateRoom = $"UPDATE Room SET IsBooked = 'No' WHERE RId = {RId}";
+        int count1 = Da.ExecuteDML(updateRoom);
+
+        if (count1 == 1)
+        {
+            Console.WriteLine("Data Updated In Room Table Successfully.");
+        }
+        else
+        {
+            Console.WriteLine("Data Upgradation Failed In Room Table.");
+        }
+
+        string updateBooking = $"UPDATE Booking SET Advance = {Total}, Remaining = 0 WHERE BId = {BId}";
+        int count2 = Da.ExecuteDML(updateBooking);
+
+        if (count2 == 1)
+        {
+            Console.WriteLine("Data Updated In Booking Table Successfully.");
+            PopulateGridView();
+        }
+        else
+        {
+            Console.WriteLine("Data Upgradation Failed In Booking Table.");
+        }
+        ClearContent();
+    }
+    catch (Exception exc)
+    {
+        Console.WriteLine("Error: " + exc.Message);
+    }
+}
+private void DeleteBooking(int id)
+{
+    try
+    {
+        string sql = $"delete from Booking where BId = '{id}';";
+        int count = Da.ExecuteDML(sql);
+        Console.WriteLine(count == 1 ? $"Booking {id} has been deleted." : "Booking Deletion Failed.");
+        PopulateGridView();
+    }
+    catch (Exception exc)
+    {
+        Console.WriteLine("Error: " + exc.Message);
+    }
+}
+
+private void OnGridDoubleClick(Booking booking)
+{
+    BId = booking.BId;
+    RId = booking.RId;
+    CName = booking.CName;
+    Phone = booking.Phone;
+    CheckIn = booking.CheckIn;
+    CheckOut = booking.CheckOut;
+    Advance = booking.Advance;
+    Remaining = booking.Remaining;
+    Total = booking.Total;
+}
+public class Booking 
+{ public int BId { get; set; }
+ public int RId { get; set; }
+  public string CName { get; set; }
+   public string Phone { get; set; }
+   public DateTime CheckIn { get; set; }
+    public DateTime CheckOut { get; set; }
+     public double Advance { get; set; }
+      public double Remaining { get; set; }
+       public double Total { get; set; } 
+       }
+}
+
+<div class="container">
+    <div class="row"> 
+        <div class="col-md-6"> 
+            <label>Bill ID</label> 
+            <input type="text" @bind="BId" class="form-control" readonly /> 
+            </div> 
+            <div class="col-md-6"> 
+                <label>Room ID</label> 
+                <input type="text" @bind="RId" class="form-control" /> 
+                </div> 
+                <div class="col-md-6"> 
+                    <label>Customer Name</label> 
+                    <input type="text" @bind="CName" class="form-control" /> 
+                    </div> 
+                    <div class="col-md-6"> 
+                        <label>Phone</label> 
+                        <input type="text" @bind="Phone" class="form-control" /> 
+                        </div> 
+                        <div class="col-md-6"> 
+                            <label>Check In</label> 
+                            <input type="date" @bind="CheckIn" class="form-control" /> 
+                            </div> 
+                            <div class="col-md-6"> 
+                                <label>Check Out</label> 
+                                <input type="date" @bind="CheckOut" class="form-control" /> 
+                                </div> 
+                                <div class="col-md-6">
+                                    <label>Advance</label>
+                                    <input type="text" @bind="Advance" class="form-control" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label>Remaining</label>
+                                    <input type="text" @bind="Remaining" class="form-control" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label>Total</label>
+                                    <input type="text" @bind="Total" class="form-control" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label>Now Paid</label>
+                                    <input type="text" @bind="NPaid" class="form-control" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label>Return</label>
+                                    <input type="text" @bind="Return" class="form-control" readonly />
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-12">
+                                        <button class="btn btn-primary" @onclick="CalculateReturn">Calculate</button>
+                                        <button class="btn btn-secondary" @onclick="ClearContent">Clear</button>
+                                        <button class="btn btn-success" @onclick="UpdateData">Update</button>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-12">
+                                        <table class="table table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>Bill ID</th>
+                                                    <th>Room ID</th>
+                                                    <th>Customer Name</th>
+                                                    <th>Phone</th>
+                                                    <th>Check In</th>
+                                                    <th>Check Out</th>
+                                                    <th>Advance</th>
+                                                    <th>Remaining</th>
+                                                    <th>Total</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var booking in Bookings)
+                                                {
+                                                    <tr @ondblclick="() => OnGridDoubleClick(booking)">
+                                                        <td>@booking.BId</td>
+                                                        <td>@booking.RId</td>
+                                                        <td>@booking.CName</td>
+                                                        <td>@booking.Phone</td>
+                                                        <td>@booking.CheckIn.ToShortDateString()</td>
+                                                        <td>@booking.CheckOut.ToShortDateString()</td>
+                                                        <td>@booking.Advance</td>
+                                                        <td>@booking.Remaining</td>
+                                                        <td>@booking.Total</td>
+                                                        <td>
+                                                            <button class="btn btn-danger" @onclick="() => DeleteBooking(booking.BId)">Delete</button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+</div>
