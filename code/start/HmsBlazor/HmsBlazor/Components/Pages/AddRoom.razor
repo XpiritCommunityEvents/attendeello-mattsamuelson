@@ -1,0 +1,181 @@
+@page "/add-room"
+@using Project_HMS 
+@using System.Data
+@inject Project_HMS.DataAccess Da
+
+@code { 
+    private int? RId { get; set; } 
+    private string Category { get; set; } 
+    private string IsBooked { get; set; } 
+    private double? RoomCost { get; set; } 
+    private List<Room> Rooms { get; set; } = new List<Room>();
+
+    protected override void OnInitialized()
+    {
+        PopulateGridView();
+        AutoIdGenerate();
+    }
+
+    private void PopulateGridView(string sql = "select * from Room;")
+    {
+        try
+        {
+            DataSet ds1 = Da.ExecuteQuery(sql);
+            Rooms = ds1.Tables[0].AsEnumerable().Select(row => new Room
+            {
+                RId = (int)row["RId"],
+                Category = row["Category"].ToString(),
+                IsBooked = row["IsBooked"].ToString(),
+                RoomCost = (double)row["RoomCost"]
+            }).ToList();
+        }
+        catch (Exception exc)
+        {
+            Console.WriteLine("Error: " + exc.Message);
+        }
+    }
+
+    private void AutoIdGenerate()
+    {
+        try
+        {
+            string sql1 = "select RId from Room order by RId desc;";
+            DataTable dt1 = Da.ExecuteQueryTable(sql1);
+            string I = dt1.Rows[0]["RId"].ToString();
+            var ID = Convert.ToDouble(I);
+            RId = (int)(ID + 1);
+        }
+        catch (Exception exc)
+        {
+            Console.WriteLine("Error: " + exc.Message);
+        }
+    }
+
+    private void ClearContent()
+    {
+        Category = string.Empty;
+        IsBooked = string.Empty;
+        RoomCost = null;
+    }
+
+    private void SaveRoom()
+    {
+        try
+        {
+            if (!RId.HasValue || string.IsNullOrEmpty(Category) || string.IsNullOrEmpty(IsBooked) || !RoomCost.HasValue)
+            {
+                Console.WriteLine("To add Room please fill all the information.");
+                return;
+            }
+
+            var sql = $"select * from Room where RId = {RId};";
+            var ds = Da.ExecuteQuery(sql);
+            if (ds.Tables[0].Rows.Count == 1)
+            {
+                string query = $"update Room set Category = '{Category}', IsBooked = '{IsBooked}', RoomCost = {RoomCost} where RId = {RId};";
+                int count = Da.ExecuteDML(query);
+                Console.WriteLine(count == 1 ? "Room Updated Successfully." : "Room Upgradation Failed.");
+            }
+            else
+            {
+                string query = $"insert into Room values ({RId}, '{Category}', '{IsBooked}', {RoomCost}, NULL);";
+                int count = Da.ExecuteDML(query);
+                Console.WriteLine(count == 1 ? "Room Inserted." : "Room Insertion Failed.");
+            }
+
+            PopulateGridView();
+            ClearContent();
+            AutoIdGenerate();
+        }
+        catch (Exception exc)
+        {
+            Console.WriteLine("Error: " + exc.Message);
+        }
+    }
+
+    private void DeleteRoom(int id)
+    {
+        try
+        {
+            string sql = $"delete from Room where RId = '{id}';";
+            int count = Da.ExecuteDML(sql);
+            Console.WriteLine(count == 1 ? $"Room {id} has been deleted." : "Room Deletion Failed.");
+            PopulateGridView();
+        }
+        catch (Exception exc)
+        {
+            Console.WriteLine("Error: " + exc.Message);
+        }
+    }
+
+    private void OnGridDoubleClick(Room room)
+    {
+        RId = room.RId;
+        Category = room.Category;
+        IsBooked = room.IsBooked;
+        RoomCost = room.RoomCost;
+    }
+
+    public class Room 
+    { 
+        public int RId { get; set; }
+        public string Category { get; set; }
+        public string IsBooked { get; set; }
+        public double RoomCost { get; set; }
+    }    
+}
+<div class="container"> 
+    <div class="row"> 
+        <div class="col-md-6"> 
+            <label>Room ID</label> 
+            <input type="text" @bind="RId" class="form-control" readonly /> 
+        </div> 
+        <div class="col-md-6"> 
+            <label>Category</label> 
+            <input type="text" @bind="Category" class="form-control" /> 
+        </div> 
+        <div class="col-md-6"> 
+            <label>Is Booked</label> 
+            <input type="text" @bind="IsBooked" class="form-control" /> 
+        </div> 
+        <div class="col-md-6"> 
+            <label>Room Cost</label> 
+            <input type="text" @bind="RoomCost" class="form-control" /> 
+        </div> 
+    </div> 
+    <div class="row mt-3"> 
+        <div class="col-md-12"> 
+            <button class="btn btn-primary" @onclick="SaveRoom">Save</button> 
+            <button class="btn btn-secondary" @onclick="ClearContent">Clear</button> 
+        </div> 
+    </div> 
+    <div class="row mt-3"></div> 
+        <div class="col-md-12"> 
+            <table class="table table-bordered"> 
+                <thead> 
+                    <tr> 
+                        <th>Room ID</th> 
+                        <th>Category</th> 
+                        <th>Is Booked</th> 
+                        <th>Room Cost</th> 
+                        <th>Actions</th> 
+                    </tr> 
+                </thead> 
+                <tbody> 
+                    @foreach (var room in Rooms) 
+                    { 
+                        <tr @ondblclick="() => OnGridDoubleClick(room)"> 
+                            <td>@room.RId</td> 
+                            <td>@room.Category</td> 
+                            <td>@room.IsBooked</td> 
+                            <td>@room.RoomCost</td> 
+                            <td> 
+                                <button class="btn btn-danger" @onclick="() => DeleteRoom(room.RId)">Delete</button> 
+                            </td> 
+                        </tr> 
+                    } 
+                </tbody> 
+            </table> 
+        </div> 
+    </div> 
+
